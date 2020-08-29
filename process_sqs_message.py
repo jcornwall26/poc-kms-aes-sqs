@@ -1,27 +1,27 @@
-import json
 import boto3
 import base64
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+import getopt
+import sys
 from configuration import Configuration
+from encryption_manager import EncryptionManager
 
 # TODO update to pull messages in batches
 def process_sqs_message(number_of_messages):
-    session = boto3.Session(profile_name=Configuration.REGION)
+    print(f'Starting process_sqs_message')
+    session = boto3.Session(profile_name=Configuration.PROFILE)
     sqs_client = session.client('sqs', region_name=Configuration.REGION)
-    response = sqs_client.receive_message(QueueUrl=SQS_URL)
+    response = sqs_client.receive_message(QueueUrl=Configuration.SQS_URL)
     if 'Messages' in response:
         for message in response['Messages']:
-            message_body = message['Body'].encode('utf-8')
-            print (message_body)
+            message_body = message['Body'] #.encode('utf-8')
             cipher_bytes = base64.b64decode(message_body)
-            plain_text = decrypt_message(cipher_bytes) 
-            # .decode('utf-8')
-            print ('Message from queue, decrypted:')
-            print (plain_text)
+            plain_text = EncryptionManager.decrypt_message(cipher_bytes) 
+            print (f'Message from queue, decrypted: {plain_text}')
             sqs_client.delete_message(QueueUrl=Configuration.SQS_URL, ReceiptHandle=message['ReceiptHandle'])
     else:
         print('No messages to process')
+
+    print(f'Finished process_sqs_message')
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
